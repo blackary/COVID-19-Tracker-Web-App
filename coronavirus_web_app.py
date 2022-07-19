@@ -15,6 +15,32 @@ st.subheader(
     "This application shows all current COVID-19 case numbers, deaths, and recoveries on a worldwide and country-by-country basis")
 st.caption("Created by Daniyal Dawood")
 
+def get_data(:
+    case = requests.get(f"https://www.parsehub.com/api/v2/projects/{p_token}/last_ready_run/data",
+                        params={"api_key": key})  # Use web scraping to find data
+    stats = json.loads(case.text)  # Use the JSON format of the data
+    return stats
+
+@st.experimental_memo
+def get_and_update_data():
+    hello = requests.post(f'https://www.parsehub.com/api/v2/projects/{p_token}/run', params={"api_key": key})
+    stats = json.loads(hello.text)
+
+    def update():
+        time.sleep(0.1)
+        old_info = get_data()
+        while True:
+            new_info = stats
+            if new_info != old_info:
+                stats = new_info
+                break
+            time.sleep(5)
+
+    thread = threading.Thread(target=update)
+    thread.start()
+             
+    return stats
+             
 
 class Tracker:
     def __init__(self, key, p_token):
@@ -23,13 +49,7 @@ class Tracker:
         self.params = {
             "key": self.key
         }
-        self.stats = self.data()
-    
-    def data(self):
-        case = requests.get(f"https://www.parsehub.com/api/v2/projects/{p_token}/last_ready_run/data",
-                            params={"api_key": key})  # Use web scraping to find data
-        stats = json.loads(case.text)  # Use the JSON format of the data
-        return stats
+        self.stats = get_and_update_data()
     
     def worldwide_cases(self):
         world = self.stats["world_total"]  # Find total worldwide cases
@@ -72,22 +92,6 @@ Cases: {data['states_cases']}
 Deaths: {data['states_deaths']} 
 Recoveries: {data['states_recovered']}""")
 
-    def new_info(self):
-        hello = requests.post(f'https://www.parsehub.com/api/v2/projects/{p_token}/run', params={"api_key": key})
-        stats = json.loads(hello.text)
-
-        def update():
-            time.sleep(0.1)
-            old_info = self.stats
-            while True:
-                new_info = stats
-                if new_info != old_info:
-                    self.stats = new_info
-                    break
-                time.sleep(5)
-
-        thread = threading.Thread(target=update)
-        thread.start()
 
 
 data = Tracker(key, p_token)
